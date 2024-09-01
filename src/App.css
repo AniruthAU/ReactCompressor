@@ -156,3 +156,44 @@ progress::-moz-progress-bar {
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #333;
+  padding: 10px;
+  color: white;
+}
+
+.nav-left, .nav-middle, .nav-right {
+  display: flex;
+  align-items: center;
+}
+
+.nav-left a, .nav-right button {
+  color: white;
+  text-decoration: none;
+  margin: 0 10px;
+  font-size: 16px;
+}
+
+.nav-left a:hover, .nav-right button:hover {
+  text-decoration: underline;
+}
+
+.nav-middle h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.nav-right button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.nav-right button:hover {
+  text-decoration: underline;
+}

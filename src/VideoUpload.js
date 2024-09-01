@@ -1,59 +1,105 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import io from 'socket.io-client';
+import axios from 'axios';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend } from 'chart.js';
 
-const socket = io('http://localhost:3000'); // Update to match your server's address
+ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
+
+const socket = io('http://localhost:3000'); // Connect to your server
 
 function VideoUpload() {
   const [videoFile, setVideoFile] = useState(null);
   const [resolution, setResolution] = useState('720p');
   const [progress, setProgress] = useState(0);
   const [downloadLink, setDownloadLink] = useState('');
+  const [cpuUsage, setCpuUsage] = useState([]);
 
   useEffect(() => {
-    socket.on('progress', (data) => {
-      setProgress(data.percent);
+    // Listen for compression progress updates
+    socket.on('compressProgress', (data) => {
+      console.log(`Compression Progress: ${data.percent}%`); // Debugging
+      setProgress((prevProgress) => Math.max(1, Math.min(100, data.percent)));
+    });
+
+    // Listen for CPU usage updates
+    socket.on('cpuUsage', (data) => {
+      console.log(`CPU Usage: ${data.usage}%`); // Debugging
+      setCpuUsage((prevData) => {
+        const updatedData = [...prevData, data.usage];
+        if (updatedData.length > 10) updatedData.shift(); // Keep last 10 values
+        return updatedData;
+      });
     });
 
     return () => {
-      socket.off('progress');
+      socket.off('compressProgress');
+      socket.off('cpuUsage');
     };
   }, []);
 
-  const handleFileChange = (e) => {
-    setVideoFile(e.target.files[0]);
-    setDownloadLink('');
-    setProgress(0);
-  };
-
   const handleCompress = async () => {
     if (!videoFile) {
-      console.error('No video file selected');
+      alert('Please select a video file.');
       return;
     }
-
-    const token = localStorage.getItem('authToken'); // Get the token from local storage
 
     const formData = new FormData();
     formData.append('video', videoFile);
     formData.append('resolution', resolution);
 
     try {
+      const token = localStorage.getItem('authToken'); // Ensure you're sending the token for authentication
       const response = await axios.post('http://localhost:3000/upload', formData, {
         headers: {
-          Authorization: `Bearer ${token}`, // Add the token to the request headers
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
         },
       });
-      setDownloadLink(`http://localhost:3000${response.data.downloadLink}`);
+
+      // Set download link once compression is done
+      setDownloadLink(response.data.downloadLink);
+      setProgress(100); // Set progress to 100% when done
     } catch (err) {
       console.error('Compression failed', err);
+      alert('Compression failed');
     }
+  };
+
+  const cpuData = {
+    labels: Array(cpuUsage.length).fill(''),
+    datasets: [
+      {
+        label: 'CPU Usage (%)',
+        data: cpuUsage,
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        fill: true,
+        tension: 0.3,
+      },
+    ],
+  };
+
+  const cpuOptions = {
+    scales: {
+      x: {
+        display: false,
+      },
+      y: {
+        beginAtZero: true,
+        max: 100,
+      },
+    },
   };
 
   return (
     <div className="upload-container">
       <h2>Upload and Compress Video</h2>
-      <input type="file" accept="video/*" onChange={handleFileChange} />
+      <input
+        type="file"
+        accept="video/*"
+        onChange={(e) => setVideoFile(e.target.files[0])}
+      />
       <select value={resolution} onChange={(e) => setResolution(e.target.value)}>
         <option value="144p">144p</option>
         <option value="480p">480p</option>
@@ -71,14 +117,19 @@ function VideoUpload() {
         </div>
       )}
 
-      {downloadLink && (
+      {progress === 100 && downloadLink && (
         <div>
-          <a href={downloadLink} download>
+          <a href={`http://localhost:3000${downloadLink}`} download>
             <button>Download Compressed Video</button>
           </a>
-          <video controls src={downloadLink} className="video-player"></video>
+          <video controls src={`http://localhost:3000${downloadLink}`} className="video-player"></video>
         </div>
       )}
+
+      <div>
+        <h3>CPU Usage Over Time</h3>
+        <Line data={cpuData} options={cpuOptions} />
+      </div>
     </div>
   );
 }
