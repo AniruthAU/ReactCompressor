@@ -1,6 +1,7 @@
+// src/Login.js
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -15,7 +16,14 @@ function Login() {
       const response = await axios.post('http://localhost:3000/login', { username, password });
       if (response.data.token) {
         localStorage.setItem('authToken', response.data.token); // Store the token
-        navigate('/upload'); // Navigate to the upload page
+        localStorage.setItem('isAdmin', response.data.isAdmin); // Store the admin status
+
+        // Navigate based on admin status
+        if (response.data.isAdmin) {
+          navigate('/metrics'); // Navigate to metrics page for admin
+        } else {
+          navigate('/upload'); // Navigate to the upload page for normal users
+        }
       }
     } catch (err) {
       setError('Invalid credentials, please try again.');
@@ -43,6 +51,9 @@ function Login() {
         <button type="submit">Login</button>
         {error && <p className="error">{error}</p>}
       </form>
+      <p>
+        Not registered? <Link to="/register">Create an account</Link>
+      </p>
     </div>
   );
 }
