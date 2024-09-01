@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend } from 'chart.js';
+import LatestNewsMarquee from './LatestNewsMarquee'; // Import the marquee component
 
 ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
 
@@ -15,18 +16,14 @@ function VideoTrim() {
   const [progress, setProgress] = useState(0);
   const [downloadLink, setDownloadLink] = useState('');
   const [cpuUsage, setCpuUsage] = useState([]);
-  
+
   useEffect(() => {
-    // Listen for trimming progress updates
     socket.on('trimProgress', (data) => {
         const percent = Math.max(1, Math.min(100, data.percent)); // Ensure progress is between 1 and 100
-        console.log(`Trimming Progress: ${percent}%`); // Debugging
         setProgress(percent);
     });
 
-    // Listen for CPU usage updates
     socket.on('cpuUsage', (data) => {
-        console.log(`CPU Usage: ${data.usage}%`); // Debugging
         setCpuUsage((prevData) => {
             const updatedData = [...prevData, data.usage];
             if (updatedData.length > 10) updatedData.shift(); // Keep last 10 values
@@ -41,7 +38,6 @@ function VideoTrim() {
   }, []);
 
   useEffect(() => {
-    // Display download link only when progress reaches 100%
     if (progress === 100 && downloadLink === '') {
       setDownloadLink(''); // Reset downloadLink
     }
@@ -67,7 +63,6 @@ function VideoTrim() {
         },
       });
 
-      // Set download link once trimming is done
       setDownloadLink(response.data.downloadLink);
       setProgress(100); // Set progress to 100% when done
     } catch (err) {
@@ -140,10 +135,13 @@ function VideoTrim() {
         )}
       </div>
 
-      <div>
+      <div style={{ width: '300px', height: '200px', margin: 'auto' }}>
         <h3>CPU Usage Over Time</h3>
         <Line data={cpuData} options={cpuOptions} />
       </div>
+
+      {/* Add the Latest News Marquee here */}
+      <LatestNewsMarquee />
     </div>
   );
 }

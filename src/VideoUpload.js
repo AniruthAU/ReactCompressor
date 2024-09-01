@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend } from 'chart.js';
+import LatestNewsMarquee from './LatestNewsMarquee'; // Import the marquee component
 
 ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
 
@@ -14,17 +15,14 @@ function VideoUpload() {
   const [progress, setProgress] = useState(0);
   const [downloadLink, setDownloadLink] = useState('');
   const [cpuUsage, setCpuUsage] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    // Listen for compression progress updates
     socket.on('compressProgress', (data) => {
-      console.log(`Compression Progress: ${data.percent}%`); // Debugging
       setProgress((prevProgress) => Math.max(1, Math.min(100, data.percent)));
     });
 
-    // Listen for CPU usage updates
     socket.on('cpuUsage', (data) => {
-      console.log(`CPU Usage: ${data.usage}%`); // Debugging
       setCpuUsage((prevData) => {
         const updatedData = [...prevData, data.usage];
         if (updatedData.length > 10) updatedData.shift(); // Keep last 10 values
@@ -44,6 +42,8 @@ function VideoUpload() {
       return;
     }
 
+    setIsUploading(true); // Disable the button during upload
+
     const formData = new FormData();
     formData.append('video', videoFile);
     formData.append('resolution', resolution);
@@ -57,17 +57,18 @@ function VideoUpload() {
         },
       });
 
-      // Set download link once compression is done
       setDownloadLink(response.data.downloadLink);
       setProgress(100); // Set progress to 100% when done
+      setIsUploading(false); // Re-enable the button
     } catch (err) {
       console.error('Compression failed', err);
       alert('Compression failed');
+      setIsUploading(false); // Re-enable the button even if there's an error
     }
   };
 
   const cpuData = {
-    labels: Array(cpuUsage.length).fill(''),
+    labels: cpuUsage.map((_, index) => `Point ${index + 1}`),
     datasets: [
       {
         label: 'CPU Usage (%)',
@@ -83,7 +84,7 @@ function VideoUpload() {
   const cpuOptions = {
     scales: {
       x: {
-        display: false,
+        display: true,
       },
       y: {
         beginAtZero: true,
@@ -99,15 +100,16 @@ function VideoUpload() {
         type="file"
         accept="video/*"
         onChange={(e) => setVideoFile(e.target.files[0])}
+        disabled={isUploading} // Disable during upload
       />
-      <select value={resolution} onChange={(e) => setResolution(e.target.value)}>
+      <select value={resolution} onChange={(e) => setResolution(e.target.value)} disabled={isUploading}>
         <option value="144p">144p</option>
         <option value="480p">480p</option>
         <option value="720p">720p</option>
         <option value="1080p">1080p</option>
       </select>
-      <button onClick={handleCompress} disabled={!videoFile}>
-        Compress and Download
+      <button onClick={handleCompress} disabled={!videoFile || isUploading}>
+        {isUploading ? 'Uploading...' : 'Compress and Download'}
       </button>
 
       {progress > 0 && (
@@ -130,6 +132,9 @@ function VideoUpload() {
         <h3>CPU Usage Over Time</h3>
         <Line data={cpuData} options={cpuOptions} />
       </div>
+
+      {/* Place the Latest News Marquee at the bottom */}
+      <LatestNewsMarquee />
     </div>
   );
 }

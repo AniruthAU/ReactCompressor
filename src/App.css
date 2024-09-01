@@ -197,3 +197,20 @@ progress::-moz-progress-bar {
 .nav-right button:hover {
   text-decoration: underline;
 }
+
+/* src/App.css */
+.marquee-container {
+  margin: 10px 0;
+  background-color: #f1f1f1;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.marquee-container a {
+  text-decoration: none;
+  color: #007bff;
+}
+
+.marquee-container a:hover {
+  text-decoration: underline;
+}
